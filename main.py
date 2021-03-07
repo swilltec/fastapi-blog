@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 
-
 from blog.database import engine
 
 from blog.routers import blog, users

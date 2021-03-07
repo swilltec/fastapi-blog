@@ -1,64 +1,39 @@
 from typing import List
 
-from fastapi import (FastAPI, Depends, status, Response,
-                     HTTPException, APIRouter)
+from fastapi import (Depends, status, Response, APIRouter)
 
 from sqlalchemy.orm import Session
 
 from .. import schemas, database, models
+from ..repository import blog
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/blog",
+    tags=["Blogs"]
+)
 
-@router.post('/blog/', status_code=status.HTTP_201_CREATED, tags=["blogs"])
-def create_blogpost(request: schemas.Blog, db: Session = Depends(database.get_db)):
-    new_blog = models.Blog(
-        title=request.title,
-        body=request.body,
-        user_id=1, )
-    db.add(new_blog)
-    db.commit()
-    db.refresh(new_blog)
-    return new_blog
+@router.post('/', status_code=status.HTTP_201_CREATED)
+def create_blogpost_route(request: schemas.Blog, db: Session = Depends(database.get_db)):
+    return blog.create(request, db)
 
 
-@router.get('/blog/', response_model=List[schemas.ShowBlog], tags=["blogs"])
-def get_all_blogpost(db: Session = Depends(database.get_db)):
-    blogs = db.query(models.Blog).all()
-    return blogs
+@router.get('/', response_model=List[schemas.ShowBlog])
+def all_post_route(db: Session = Depends(database.get_db)):
+    return blog.get_all(db)
 
 
-@router.get('/blog/{id}', status_code=status.HTTP_200_OK, response_model=schemas.ShowBlog, tags=["blogs"])
-def get_blogpost_by_id(id, response:Response, db: Session = Depends(database.get_db)):
-    blog = db.query(models.Blog).filter(models.Blog.id == id).first()
-    if not blog:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail= f'blog post with this id {id} does not exist')
-  
-    return blog
+@router.get('/{id}', status_code=status.HTTP_200_OK, response_model=schemas.ShowBlog)
+def blogpost_detail_route(id, response:Response, db: Session = Depends(database.get_db)):
+    return blog.get_detail(id, db)
 
 
-@router.put('/blog/{id}', status_code=status.HTTP_202_ACCEPTED, tags=["blogs"])
+@router.put('/{id}', status_code=status.HTTP_202_ACCEPTED)
 def update_blogpost_by_id(id, request: schemas.Blog, db: Session=Depends(database.get_db)):
-    blog = db.query(models.Blog).filter(models.Blog.id == id)
-    if not blog.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail= f'blog post with this id {id} does not exist')
-    blog.update(request)
-    db.commit()
-
-    return {'msg':'operation was sucessful'}
+    return blog.update(id, request, db)
 
 
-@router.delete('/blog/{id}', status_code=status.HTTP_200_OK, tags=["blogs"])
-def delete_blogpost_by_id(id, response:Response, db: Session = Depends(database.get_db)):
-    blog =  db.query(models.Blog).filter(models.Blog.id == id)
-    if not blog.first():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail= f'blog post with this id {id} does not exist')
-
-    blog.delete(synchronize_session=False)
-    db.commit()
-  
-    return {'msg':'operation was sucessful'}
+@router.delete('/{id}', status_code=status.HTTP_200_OK)
+def delete_blogpost_by_id(id, response:Response, db: Session = Depends(database.get_db)):  
+    return blog.delete(id, db)
 
 
