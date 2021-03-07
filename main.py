@@ -1,40 +1,28 @@
-from fastapi import FastAPI
-from typing import Optional
+from fastapi import FastAPI, Depends
 
-from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from blog import schemas, models
+from blog.database import engine, SessionLocal
 
 app = FastAPI()
 
+models.Base.metadata.create_all(engine)
 
-class Blog(BaseModel):
-    title: str
-    body: str
-    published: Optional[bool] = True
+def get_db():
+    db = SessionLocal()
 
+    try: 
+        yield db
 
-
-@app.get('/blog')
-def index(limit=10, published: bool = True, sort: Optional[str] = None):
-    return {'data': f'{limit} blog list'}
-
-
-@app.get('/blog/unpublished')
-def unpublished_blogs():
-    return {'data': 'all unpublished blogs'}
+    finally:
+        db.close()
 
 
-@app.get('/blog/{id}')
-def blog(id: int):
-    return {'data': id}
-
-
-
-@app.get('/blog/{id}/comments')
-def single_blog(id, limit=10):
-    return {'data': id}
-
-
-
-@app.post("/blog/")
-def create_blog(blog: Blog):
-    return {"data": f"Blog is created with title as {blog.title}"}
+@app.post('/blog/')
+def create(blog: schemas.Blog, db: Session = Depends(get_db)):
+    new_blog = models.Blog(title=blog.title, body=blog.body)
+    db.add(new_blog)
+    db.commit()
+    db.refresh(new_blog)
+    return new_blog
