@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, Depends, status, Response, HTTPException
 
 from sqlalchemy.orm import Session
@@ -28,13 +29,13 @@ def create_blogpost(request: schemas.Blog, db: Session = Depends(get_db)):
     return new_blog
 
 
-@app.get('/blog/')
+@app.get('/blog/', response_model=List[schemas.ShowBlog])
 def get_all_blogpost(db: Session = Depends(get_db)):
     blogs = db.query(models.Blog).all()
     return blogs
 
 
-@app.get('/blog/{id}', status_code=status.HTTP_200_OK)
+@app.get('/blog/{id}', status_code=status.HTTP_200_OK, response_model=schemas.ShowBlog)
 def get_blogpost_by_id(id, response:Response, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == id).first()
     if not blog:
@@ -52,7 +53,7 @@ def update_blogpost_by_id(id, request: schemas.Blog, db: Session=Depends(get_db)
                             detail= f'blog post with this id {id} does not exist')
     blog.update(request)
     db.commit()
-    
+
     return {'msg':'operation was sucessful'}
 
 
@@ -67,3 +68,11 @@ def delete_blogpost_by_id(id, response:Response, db: Session = Depends(get_db)):
     db.commit()
   
     return {'msg':'operation was sucessful'}
+
+@app.post('/user/')
+def create_user(request: schemas.User, db: Session = Depends(get_db)):
+    new_user = models.User(name=request.name, email=request.email, password=request.password)
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
