@@ -42,3 +42,13 @@ def get_blogpost_by_id(id, response:Response, db: Session = Depends(get_db)):
                             detail= f'blog post with this id {id} does not exist')
   
     return blog
+
+
+@app.delete('/blog/{id}', status_code=status.HTTP_200_OK)
+def delete_blogpost_by_id(id, response:Response, db: Session = Depends(get_db)):
+    db.query(models.Blog).filter(models.Blog.id == id).\
+            delete(synchronize_session=False)
+
+    db.commit()
+  
+    return {'msg':'operation was sucessful'}
